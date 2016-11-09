@@ -2,6 +2,7 @@
 #include <vector>       // STL data structures
 #include <stack>
 #include <queue> 
+#include <set>
 #include "Basics2D.h"
 #include "Table2D.h"
 #include "Math2D.h"
@@ -180,26 +181,42 @@ void computePaths(Point seed)
 	// STUDENTS: YOU NEED TO REPLACE THE CODE BELOW (which is a copy of BFS algorithm in region growing)
 	// Create a queue (priority_queue) for "active" points/pixels and 
 	// traverse pixels to improve paths stored in "toParent" (and "dist") 
-	queue<Point> active; 
-	active.push(seed);
+	priority_queue<MyPoint, std::vector<MyPoint>, std::greater<MyPoint>> active; //TODO: CHECK IF COMPARING PROPERLY
+	set<MyPoint> activeSet;
+	pair<set<MyPoint>::iterator,bool> ret;
+
+	// Initialize queue and set
+	MyPoint seedPoint(seed, dist[seed]);
+	active.push(seedPoint);
+	activeSet.insert(seedPoint);
 	while(!active.empty())
 	{
-		Point p = active.front();
+		Point p = active.top(); 
 		active.pop();
-		region[p] = 1;  // pixel p is extracted from the "active_front" and added to "region", but
-		counter++;    // then, all "appropriate" neighbors of p are added to "active_front" (below)
-		for (int i = 0; i<4; i++) // goes over 4 neighbors of pixel p
-		{   // uses overloaded operator "+" in Point.h and array of 'shifts' (see the top of file)
-			Point q = p + shift[i]; // to compute a "neighbor" of pixel p
-			if (image.pointIn(q) && region[q] == 0 && abs(dI(image[p], image[q]))<100)
-			{ // we checked if q is inside image range and that the difference in intensity
-			  // between p and q  is sufficiently small 	 
+		activeSet.erase(activeSet.begin());
+
+		// Go over all 4 neighbours of pixel p
+		// TODO: Also add 8 neighbours
+		for (int i = 0; i < 4; i++) {
+			Point q = p + shift[i]; // Compute "neighbour" of pixel p
+			double origQDist = dist[q];
+
+			float w_pq = 1; // TODO: get weight from p to q
+			if ((origQDist + w_pq) < origQDist) {
+				dist[q] = origQDist + w_pq;
 				toParent[q] = Reverse[i];
-				active.push(q);
-				region[q] = 2; // "region" value 2 corresponds to pixels in "active front".
-			}                 // Eventually, all pixels in "active front" are extracted 
-		}                     // and their "region" value is set to 1.
-		if (view && counter%60==0) {draw(); Pause(20);} // visualization, skipped if checkbox "view" is off
+			}
+
+			// Only add q to active list if it isn't already there
+			// TODO: OH NO. BUT AHHHHHHHHHHHHHH. IT WILL HAVE THE OLD DISTANCE. DAMMIT
+			MyPoint qPoint(q, dist[q]);
+			ret = activeSet.insert(MyPoint(q, origQDist));
+			if (ret.second==true) {
+				active.push(qPoint);
+				activeSet.erase(ret.first);
+				activeSet.insert(qPoint);
+			}
+		}
 	} 
 	cout << "paths computed,  number of 'pops' = " << counter 
 		 <<  ",  number of pixels = " << (region.getWidth()*region.getHeight()) << endl; 
