@@ -30,4 +30,5 @@ public:
 	MyPoint(Point p, double priority) : Point(p), m_priority(priority) {}
 	double getPriority() const {return m_priority;}	
     bool operator<(const MyPoint& b) const   {return getPriority() > b.getPriority();}
+    bool operator>(const MyPoint& b) const   {return getPriority() < b.getPriority();}
 };

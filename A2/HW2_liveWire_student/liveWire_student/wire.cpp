@@ -13,11 +13,14 @@
 
 // GLOBAL PARAMETERS AND SPECIALISED DATA TYPES
 const double INFTY=1.e20;
-static const Point shift[4]={Point(-1,0),Point(1,0),Point(0,-1),Point(0,1)};
-enum Direction {LEFT=0, RIGHT=1, TOP=2, BOTTOM=3, NONE=10};
-const Direction Reverse[4]={RIGHT,LEFT,BOTTOM,TOP}; 
-double fn(const double t) {double w=0.1; return 1.0/(1.0+w*t);}  // function used for setting "pixel penalties" ("Sensitivity" w is a tuning parameter)
-	
+const double PI=3.1415926535897;
+const int NUMDIRS=8;
+static const Point shift[NUMDIRS]={Point(-1,0),Point(1,0),Point(0,-1),Point(0,1),Point(-1,-1),Point(1,-1),Point(-1,1),Point(1,1)};
+enum Direction {LEFT=0, RIGHT=1, TOP=2, BOTTOM=3, TOPLEFT=4, TOPRIGHT=5, BOTTOMLEFT=6, BOTTOMRIGHT=7, NONE=10};
+const Direction Reverse[NUMDIRS]={RIGHT,LEFT,BOTTOM,TOP,BOTTOMRIGHT,BOTTOMLEFT,TOPRIGHT,TOPLEFT}; 
+//double fn(const double t) {double w=0.1; return 1.0/(1.0+w*t);}  // function used for setting "pixel penalties" ("Sensitivity" w is a tuning parameter)
+double fn(const double t) {double w=100; return (1/(sqrt(2*PI)*w))*exp(-(pow(t, 2))/(2*pow(w,2)));}
+
 // declarations of global variables 
 Table2D<RGB> image; // image is "loaded" from a BMP file by function "image_load" in "main.cpp" 
 vector<Point> contour; // list of "contour" points
@@ -181,43 +184,41 @@ void computePaths(Point seed)
 	// STUDENTS: YOU NEED TO REPLACE THE CODE BELOW (which is a copy of BFS algorithm in region growing)
 	// Create a queue (priority_queue) for "active" points/pixels and 
 	// traverse pixels to improve paths stored in "toParent" (and "dist") 
-	priority_queue<MyPoint, std::vector<MyPoint>, std::greater<MyPoint>> active; //TODO: CHECK IF COMPARING PROPERLY
-	set<MyPoint> activeSet;
-	pair<set<MyPoint>::iterator,bool> ret;
+	//priority_queue<MyPoint> active; 
+	queue<MyPoint> active; // TODO: PRIORITY QUEUE??? BUT SO SLOW
 
 	// Initialize queue and set
-	MyPoint seedPoint(seed, dist[seed]);
-	active.push(seedPoint);
-	activeSet.insert(seedPoint);
+	active.push(MyPoint(seed, dist[seed]));
 	while(!active.empty())
 	{
-		Point p = active.top(); 
+		MyPoint p = active.front(); 
 		active.pop();
-		activeSet.erase(activeSet.begin());
+		region[p] = 1; // 1 = expanded
+		counter++;
 
-		// Go over all 4 neighbours of pixel p
-		// TODO: Also add 8 neighbours
-		for (int i = 0; i < 4; i++) {
+		// Go over all neighbours of pixel p
+		for (int i = 0; i < NUMDIRS; i++) {
 			Point q = p + shift[i]; // Compute "neighbour" of pixel p
-			double origQDist = dist[q];
 
-			float w_pq = 1; // TODO: get weight from p to q
-			if ((origQDist + w_pq) < origQDist) {
-				dist[q] = origQDist + w_pq;
-				toParent[q] = Reverse[i];
-			}
+			// If q is in the image and has not yet been expanded
+			if (image.pointIn(q) && region[q] != 1) {
 
-			// Only add q to active list if it isn't already there
-			// TODO: OH NO. BUT AHHHHHHHHHHHHHH. IT WILL HAVE THE OLD DISTANCE. DAMMIT
-			MyPoint qPoint(q, dist[q]);
-			ret = activeSet.insert(MyPoint(q, origQDist));
-			if (ret.second==true) {
-				active.push(qPoint);
-				activeSet.erase(ret.first);
-				activeSet.insert(qPoint);
+				double w_pq = penalty[q]; // TODO: get weight from p to q
+				if ((dist[p] + w_pq) < dist[q]) {
+					dist[q] = dist[p] + w_pq;
+					toParent[q] = Reverse[i];
+				}
+
+				// Only add q to active list if it is a free node
+				if (region[q] == 0) {
+					active.push(MyPoint(q, dist[q]));
+					region[q] = 2; // 2 = active front
+				}
 			}
 		}
+		if (view && counter%60==0) {draw(); Pause(20);} // visualization, skipped if checkbox "view" is off
 	} 
+
 	cout << "paths computed,  number of 'pops' = " << counter 
 		 <<  ",  number of pixels = " << (region.getWidth()*region.getHeight()) << endl; 
 }
