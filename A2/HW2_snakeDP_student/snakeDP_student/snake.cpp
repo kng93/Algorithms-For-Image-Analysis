@@ -104,39 +104,28 @@ void DP_move()
 	closeEnergy.reset(n, NUMDIRS, vitNode(0, 0));
 	//Table2D<double> contrast = grad2(image); // describes "rate of change" of intensity
 
-	// Freeze the end point of the closed snake
-	for (int s1 = 0; s1 < NUMDIRS; s1++) {
-		vitNode minEnergy(INFTY, 0);
-		Point shiftNext = contour[0] + shift[s1];
-		for (int s2 = 0; s2 < NUMDIRS; s2++) {
-			Point shiftCur = contour[n-1] + shift[s2];
-			double curEnergy = (alpha * (shiftNext - shiftCur).norm());
-
-			if (curEnergy < minEnergy.energy)
-				minEnergy = vitNode(curEnergy, s2);
-		}
-		energy[n - 1][s1] = minEnergy;
-	}
-
+	int halfidx = 0;
 	int curState = 0;
 	double bestEnergy = INFTY;
-	for (int i = 0; i<n - 1; i++) {
+	for (int i = halfidx; i<n + halfidx; i++) {
+		int idx = i % n;
+		int nextIdx = (i + 1) % n;
 		// Iterate over all neighbours (states) of the next contour
 		for (int s1 = 0; s1<NUMDIRS; s1++) {
 			vitNode minEnergy(INFTY, 0);
-			Point shiftNext = contour[i + 1] + shift[s1];
+			Point shiftNext = contour[nextIdx] + shift[s1];
 			// Iterate over all neighbours (states) of the current contour
 			for (int s2 = 0; s2 < NUMDIRS; s2++) {
-				Point shiftCur = contour[i] + shift[s2];
-				double curEnergy = (i > 0) ? energy[i - 1][s2].energy : energy[n - 1][s2].energy;
+				Point shiftCur = contour[idx] + shift[s2];
+				double curEnergy = (idx > 0) ? energy[idx - 1][s2].energy : 0;// energy[n - 1][s2].energy;
 				curEnergy = curEnergy + (alpha * (shiftNext - shiftCur).norm());
 
 				if (curEnergy < minEnergy.energy)
 					minEnergy = vitNode(curEnergy, s2);
 			}
-			energy[i][s1] = minEnergy;
+			energy[idx][s1] = minEnergy;
 			// Get the minimum state of the last node
-			if ((i == n - 2) && (minEnergy.energy < bestEnergy)) {
+			if ((idx == n - 1) && (minEnergy.energy < bestEnergy)) {
 				curState = s1;
 				bestEnergy = minEnergy.energy;
 			}
@@ -146,32 +135,20 @@ void DP_move()
 
 	// TODO: CLEAN THIS UP INSTEAD OF JUST COPYING THIS CODE =_=
 	// Freeze the end point of the closed snake
-	int halfidx = int(n / 2);
-	for (int s1 = 0; s1 < NUMDIRS; s1++) {
-		vitNode minEnergy(INFTY, 0);
-		Point shiftNext = contour[halfidx + 1] + shift[s1];
-		for (int s2 = 0; s2 < NUMDIRS; s2++) {
-			Point shiftCur = contour[halfidx] + shift[s2];
-			double curEnergy = (alpha * (shiftNext - shiftCur).norm());
-
-			if (curEnergy < minEnergy.energy)
-				minEnergy = vitNode(curEnergy, s2);
-		}
-		closeEnergy[halfidx][s1] = minEnergy;
-	}
-
+	halfidx = int(n / 2);
 	int closeCurState = 0;
 	double closeBestEnergy = INFTY;
 	for (int i = halfidx; i<n + halfidx; i++) {
 		int idx = i % n;
+		int nextIdx = (i + 1) % n;
 		// Iterate over all neighbours (states) of the next contour
 		for (int s1 = 0; s1<NUMDIRS; s1++) {
 			vitNode minEnergy(INFTY, 0);
-			Point shiftNext = contour[idx + 1] + shift[s1];
+			Point shiftNext = contour[nextIdx] + shift[s1];
 			// Iterate over all neighbours (states) of the current contour
 			for (int s2 = 0; s2 < NUMDIRS; s2++) {
 				Point shiftCur = contour[idx] + shift[s2];
-				double curEnergy = (i > 0) ? energy[i - 1][s2].energy : energy[n - 1][s2].energy;
+				double curEnergy = (idx > 0) ? closeEnergy[idx - 1][s2].energy : closeEnergy[n - 1][s2].energy;
 				curEnergy = curEnergy + (alpha * (shiftNext - shiftCur).norm());
 
 				if (curEnergy < minEnergy.energy)
@@ -186,15 +163,21 @@ void DP_move()
 		}
 	}
 
-	if (closeBestEnergy < bestEnergy)
+	if (closeBestEnergy < bestEnergy) {
 		energy = closeEnergy;
+		curState = closeCurState;
+	}
+	else {
+		halfidx = 0;
+	}
 
 	// Set the contour points
-	for (int i = (n - 1); i > 0; i--) {
-		contour[i] = contour[i] + shift[curState];
-		curState = energy[i - 1][curState].toParent;
+	for (int i = halfidx + n; i > halfidx; i--) {
+		int idx = i % n;
+		int prevIdx = (i - 1) % n;
+		contour[idx] = contour[idx] + shift[curState];
+		curState = energy[prevIdx][curState].toParent;
 	}
-	contour[0] = contour[0] + shift[curState];
 }
 
 //void DP_move()
