@@ -14,9 +14,10 @@
 const char* image_names[] = { "logo" , "uwocampus", "canada", "original" , "model" , "liver" }; // an array of image file names
 int im_index = 1;    // index of currently opened image (inital value)
 int save_counter[] = {0,0,0,0,0,0}; // counter of saved results for each image above 
-const char* mode_names[]  = { "ELASTIC", "KEEP LENGTH", "XXXXX"}; // an array of mode names 
-enum Mode  {ELASTIC=0, KEEP_LENGTH=1, XXXXX=2}; 
+const char* mode_names[]  = { "ELASTIC", "KEEP LENGTH", "IMG GRAD", "DIST XFORM"}; // an array of mode names 
+enum Mode  {ELASTIC=0, KEEP_LENGTH=1, IMG_GRAD=2, DIST_XFORM=3}; 
 Mode mode = ELASTIC; // index of the current mode (in the array 'mode_names')
+int modeVal = 0;
 bool flagGD = false; // flag set by the check box
 const int cp_height = 34; // height of "control panel" (area for buttons)
 const int pad = 10; // width of extra "padding" around image (inside window)
@@ -101,6 +102,7 @@ int main()
 void mode_set(int index)
 {
 	mode = (Mode) index;
+	modeVal = index;
 	cout << "drawing mode is set to " << mode_names[index] << endl;
 	reset_segm();
 	draw();
@@ -113,8 +115,8 @@ void image_load(int index)
 	im_index = index;
 	cout << "loading image file " << image_names[index] << ".bmp" << endl;
 	image = loadImage<RGB>(to_Cstr(image_names[index] << ".bmp")); // global function defined in Image2D.h
-	int width  = std::max(400,(int)image.getWidth()) + 2*pad + 80;
-	int height = std::max(100,(int)image.getHeight())+ 2*pad + cp_height;
+	int width  = max(400,(int)image.getWidth()) + 2*pad + 80;
+	int height = max(100,(int)image.getHeight())+ 2*pad + cp_height;
 	SetWindowSize(width,height); // window height includes control panel ("cp")
     SetControlPosition(   dP_box,     image.getWidth()+pad+5, cp_height+pad);
     SetControlPosition(check_box_flag,image.getWidth()+pad+5, cp_height+pad+25);

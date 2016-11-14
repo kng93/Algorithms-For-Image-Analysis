@@ -8,6 +8,7 @@ extern Table2D<RGB> image;  // loaded by GUI in main.cpp
 extern bool closedContour;    // a flag indicating if contour was closed - set in snake.cpp
 extern vector<Point> contour;   // a list of control points for a "snake" - set in snake.cpp
 extern int dP;   // spacing between control points (in pixels) - set in snake.cpp
+extern int modeVal; // set in main.cpp
 
 void addToContour(Point click);
 void addToContourLast(Point click);
@@ -31,4 +32,5 @@ public:
 };
 
 
+vitNode run_viterbi(Table2D<vitNode>& energy, int freezeIdx, double alpha, int n);
 void print_energy(Table2D<vitNode> energy);

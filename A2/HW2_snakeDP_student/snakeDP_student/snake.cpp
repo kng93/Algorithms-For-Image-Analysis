@@ -18,6 +18,7 @@ bool closedContour=false; // a flag indicating if contour was closed
 
 Table2D<vitNode> energy;
 Table2D<vitNode> energy2;
+Table2D<double> contrast; // describes "rate of change" of intensity
 const int NUMDIRS = 5;
 static const Point shift[NUMDIRS] = { Point(-1,0),Point(1,0),Point(0,-1),Point(0,1),Point(0,0) };
 enum Direction { LEFT = 0, RIGHT = 1, TOP = 2, BOTTOM = 3, STAY = 8, NONE = 10 };
@@ -38,6 +39,8 @@ void reset_segm()
 	while (!contour.empty()) contour.pop_back();
 	closedContour=false;
 
+	// Added..
+	contrast = grad2(image); // describes "rate of change" of intensity
 }
 
 // GUI calls this function when a user left-clicks on an image pixel while in "Contour" mode
@@ -100,7 +103,6 @@ void DP_move()
 	int n = (int)contour.size();
 
 	double alpha = 0.1;
-	//Table2D<double> contrast = grad2(image); // describes "rate of change" of intensity
 
 	if (closedContour) {
 		energy.reset(n, NUMDIRS, vitNode(0, 0)); // # neighbour states, # contour points nodes
@@ -124,6 +126,7 @@ void DP_move()
 		}
 	}
 	else {
+		// TODO: Compact this code a bit more... (contour drawing)
 		energy.reset(n-1, NUMDIRS, vitNode(0, 0)); // # neighbour states, # contour points nodes
 		vitNode first_energy = run_viterbi(energy, 0, alpha, n);
 		int curState = first_energy.toParent;
@@ -141,7 +144,9 @@ void DP_move()
 vitNode run_viterbi(Table2D<vitNode>& energy, int freezeIdx, double alpha, int n) {
 	vitNode bestEnergy(INFTY, 0);
 	int end = (closedContour) ? n : n - 1;
-
+	Point keep = (modeVal == 0) ? Point(0,0) : Point(1,1); // Defines space that should be kept between points
+	
+	// TODO: CHECK IF THE POINT IS IN THE IMAGE
 	for (int i = freezeIdx; i<end + freezeIdx; i++) {
 		int idx = i % n;
 		// Iterate over all neighbours (states) of the next contour
@@ -152,7 +157,8 @@ vitNode run_viterbi(Table2D<vitNode>& energy, int freezeIdx, double alpha, int n
 			for (int s2 = 0; s2 < NUMDIRS; s2++) {
 				Point shiftCur = contour[idx] + shift[s2];
 				double curEnergy = (idx > 0) ? energy[idx - 1][s2].energy : energy[end - 1][s2].energy;
-				curEnergy = curEnergy + (alpha * (shiftNext - shiftCur).norm());
+				double extEnergy = (modeVal > 1) ? pow(contrast[shiftCur],2) : 0; // Only add external energy if external mode is set
+				curEnergy = curEnergy + (alpha * (shiftNext - shiftCur - keep).norm()) - extEnergy;
 
 				if (curEnergy < minEnergy.energy)
 					minEnergy = vitNode(curEnergy, s2);
@@ -168,49 +174,6 @@ vitNode run_viterbi(Table2D<vitNode>& energy, int freezeIdx, double alpha, int n
 
 	return bestEnergy;
 }
-
-
-
-//void DP_move()
-//{
-//	int n = (int) contour.size();
-//
-//	double alpha = 0.1;
-//	energy.reset(n-1, NUMDIRS, vitNode(0,0)); // # neighbour states, # contour points nodes
-//	//Table2D<double> contrast = grad2(image); // describes "rate of change" of intensity
-//
-//	int curState = 0;
-//	double bestEnergy = INFTY;
-//	for (int i=0; i<n-1; i++) {
-//		// Iterate over all neighbours (states) of the next contour
-//		for (int s1=0; s1<NUMDIRS; s1++) {
-//			vitNode minEnergy(INFTY, 0);
-//			Point shiftNext = contour[i+1] + shift[s1];
-//			// Iterate over all neighbours (states) of the current contour
-//			for (int s2=0; s2<NUMDIRS; s2++) {
-//				Point shiftCur = contour[i] + shift[s2];
-//				double curEnergy = (i > 0) ? energy[i - 1][s2].energy : 0;
-//				curEnergy = curEnergy + (alpha * (shiftNext - shiftCur).norm());
-//
-//				if (curEnergy < minEnergy.energy) 
-//					minEnergy = vitNode(curEnergy, s2);
-//			}
-//			energy[i][s1] = minEnergy;
-//			// Get the minimum state of the last node
-//			if ((i == n - 2) && (minEnergy.energy < bestEnergy)) {
-//				curState = s1;
-//				bestEnergy = minEnergy.energy;
-//			}
-//		}
-//	}
-//
-//	// Set the rest of the contour points
-//	for (int i=(n-1); i > 0; i--) {
-//		contour[i] = contour[i] + shift[curState];
-//		curState = energy[i-1][curState].toParent;
-//	}
-//	contour[0] = contour[0] + shift[curState];
-//}
 
 ///////////////////////////////////////////////////////////////
 // DP_converge() is a function that runs DP moves for a snake
