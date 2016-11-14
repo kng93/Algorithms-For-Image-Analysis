@@ -52,7 +52,7 @@ int main()
     SetControlPosition(blank,0,0); SetControlSize(blank,1500,cp_height); // see "cs1037utils.h"
 	int dropList_files = CreateDropList(6, image_names, im_index, image_load); // the last argument specifies the call-back function, see "cs1037utils.h"
 	int label1 = CreateTextLabel("Mode:"); // see "cs1037utils.h"
-	int dropList_modes = CreateDropList(3, mode_names, mode, mode_set); // the last argument specifies the call-back function, see "cs1037utils.h"
+	int dropList_modes = CreateDropList(4, mode_names, mode, mode_set); // the last argument specifies the call-back function, see "cs1037utils.h"
 	int button_clear = CreateButton("Clear",clear); // the last argument specifies the call-back function, see "cs1037utils.h"
 	int button_save = CreateButton("Save",image_save); // the last argument specifies the call-back function, see "cs1037utils.h"
 	dP_box = CreateTextBox(to_Cstr("dP=" << dP), dP_set); // variable dP is declared in "snake.cpp" 

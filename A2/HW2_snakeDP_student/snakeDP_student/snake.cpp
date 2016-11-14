@@ -15,10 +15,14 @@ const double INFTY=1.e20;
 Table2D<RGB> image; // image is "loaded" from a BMP file by function "image_load" in "main.cpp" 
 vector<Point> contour; // list of control points of a "snake"
 bool closedContour=false; // a flag indicating if contour was closed 
+bool quad = true;
+double r = 50;
+vector<double> nudgeEn;
 
 Table2D<vitNode> energy;
 Table2D<vitNode> energy2;
 Table2D<double> contrast; // describes "rate of change" of intensity
+Table2D<double> distTransform; 
 const int NUMDIRS = 5;
 static const Point shift[NUMDIRS] = { Point(-1,0),Point(1,0),Point(0,-1),Point(0,1),Point(0,0) };
 enum Direction { LEFT = 0, RIGHT = 1, TOP = 2, BOTTOM = 3, STAY = 8, NONE = 10 };
@@ -41,6 +45,12 @@ void reset_segm()
 
 	// Added..
 	contrast = grad2(image); // describes "rate of change" of intensity
+	
+	vector<int> kernel = { 0, 1, 1, 0 };
+	distTransform.reset(image.getWidth(), image.getHeight(), 0);
+	double beta = 0.1;
+	DTFwd(kernel, beta);
+	DTBwd(kernel, beta);
 }
 
 // GUI calls this function when a user left-clicks on an image pixel while in "Contour" mode
@@ -84,7 +94,12 @@ void addAttractNudge(Point click)
 	cout << "                     ...attract to pixel p=(" << click.x << "," << click.y << ")" << endl;
 	// the code below needs to be replaced, it is for fun only :)
 	unsigned i, n = (unsigned) contour.size();
-	for (i=0; i<n; i++) contour[i] = contour[i] + ((click - contour[i])*0.25) ;
+	nudgeEn.clear();
+
+	for (i = 0; i < n; i++) nudgeEn.push_back(-pow(r,2)/(click- contour[i]).norm());
+	DP_move();
+	nudgeEn.clear();
+	//for (i = 0; i<n; i++) contour[i] = contour[i] + ((click - contour[i])*0.25);
 }
 
 void addRepulseNudge(Point click)
@@ -92,7 +107,12 @@ void addRepulseNudge(Point click)
 	cout << "                     ...repulse from pixel p=(" << click.x << "," << click.y << ")" << endl;
 	// the code below needs to be replaced, it is for fun only :)
 	unsigned i, n = (unsigned) contour.size();
-	for (i=0; i<n; i++) contour[i] = contour[i] - ((click - contour[i])*0.25) ;
+	nudgeEn.clear();
+
+	for (i = 0; i < n; i++) nudgeEn.push_back(pow(r, 2) / (click - contour[i]).norm());
+	DP_move();
+	nudgeEn.clear();
+	//for (i=0; i<n; i++) contour[i] = contour[i] - ((click - contour[i])*0.25) ;
 }
 
 ///////////////////////////////////////////////////////////////
@@ -157,8 +177,12 @@ vitNode run_viterbi(Table2D<vitNode>& energy, int freezeIdx, double alpha, int n
 			for (int s2 = 0; s2 < NUMDIRS; s2++) {
 				Point shiftCur = contour[idx] + shift[s2];
 				double curEnergy = (idx > 0) ? energy[idx - 1][s2].energy : energy[end - 1][s2].energy;
-				double extEnergy = (modeVal > 1) ? pow(contrast[shiftCur],2) : 0; // Only add external energy if external mode is set
-				curEnergy = curEnergy + (alpha * (shiftNext - shiftCur - keep).norm()) - extEnergy;
+				double extEnergy = (modeVal == 2) ? pow(contrast[shiftCur],2) : 0; // External energy using gradient
+				extEnergy = (modeVal == 3) ? pow(distTransform[shiftCur], 2) : extEnergy; // External energy using distance transform
+				extEnergy = (nudgeEn.size() > 0) ? extEnergy + nudgeEn[idx] : extEnergy;
+				double intEnergy = (quad) ? (shiftNext - shiftCur - keep).norm() : pDist(shiftNext - shiftCur - keep);
+
+				curEnergy = curEnergy + (alpha * intEnergy) - extEnergy;
 
 				if (curEnergy < minEnergy.energy)
 					minEnergy = vitNode(curEnergy, s2);
@@ -175,6 +199,7 @@ vitNode run_viterbi(Table2D<vitNode>& energy, int freezeIdx, double alpha, int n
 	return bestEnergy;
 }
 
+
 ///////////////////////////////////////////////////////////////
 // DP_converge() is a function that runs DP moves for a snake
 // until convergence to a local optima position
@@ -183,7 +208,41 @@ void DP_converge()
 	for (int i=0; i<100; i++) DP_move();
 }
 
+///////////////////////////////////////////////////////////////
+// Distance Transform functions
+// kernel - 0 = top left, 1 = top right, 2 = bottom left, 3 = bottom right
+void DTFwd(vector<int> kernel, double beta)
+{
+	for (int x = 0; x < distTransform.getWidth(); x++) {
+		for (int y = 0; y < distTransform.getHeight(); y++) {
+			double cmp1, cmp2; //cmp1 = top right, cmp2 = bottom left
+			cmp1 = (x > 0) ? contrast[x-1][y] : INFTY;
+			cmp2 = (y > 0) ? contrast[x][y - 1] : INFTY;
+			double res = min(min(beta*kernel[1] + cmp1, beta*kernel[2] + cmp2), contrast[x][y]);
+			distTransform[x][y] = res;
+		}
+	}
+}
 
+// kernel - 0 = top left, 1 = top right, 2 = bottom left, 3 = bottom right
+void DTBwd(vector<int> kernel, double beta)
+{
+	int endX = distTransform.getWidth();
+	int endY = distTransform.getHeight();
+	for (int x = 0; x < endX; x++) {
+		for (int y = 0; y < endY; y++) {
+			double cmp1, cmp2; //cmp1 = top right, cmp2 = bottom left
+			cmp1 = (x < endX-1) ? contrast[x + 1][y] : INFTY;
+			cmp2 = (y < endY-1) ? contrast[x][y + 1] : INFTY;
+			distTransform[x][y] = min(min(beta*kernel[1] + cmp1, beta*kernel[2] + cmp2), contrast[x][y]);
+		}
+	}
+}
+
+
+
+///////////////////////////////////////////////////////////////
+// DEBUGGING FUNCTION
 void print_energy(Table2D<vitNode> energy)
 {
 	for (int i = 0; i < energy.getHeight(); i++)
@@ -195,3 +254,4 @@ void print_energy(Table2D<vitNode> energy)
 		cout << "\n\n";
 	}
 }
+

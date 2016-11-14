@@ -34,3 +34,7 @@ public:
 
 vitNode run_viterbi(Table2D<vitNode>& energy, int freezeIdx, double alpha, int n);
 void print_energy(Table2D<vitNode> energy);
+
+void DTFwd(vector<int> kernel, double beta);
+void DTBwd(vector<int> kernel, double beta);
+inline double pDist(Point p) { return abs(p.x + p.y); }
