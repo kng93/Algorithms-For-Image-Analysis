@@ -23,7 +23,9 @@ bool view = false; // flag set by the check box
 const int cp_height = 34; // height of "control panel" (area for buttons)
 const int pad = 10; // width of extra "padding" around image (inside window)
 int T = 10; // region growing threshold
+int sigma = 100; // sensitivity parameter to weight the edges 
 int T_box; // handle for T-box (for setting threshold parameter T)
+int sigma_box;
 int check_box_view; // handle for 'view' check-box
 
 // declarations of global functions used in GUI (see code below "main")
@@ -35,6 +37,7 @@ void mode_set(int index);   // call-back function for dropList selecting mode
 void clear();  // call-back function for button "Clear"
 void view_set(bool v);  // call-back function for check box for "view" 
 void T_set(const char* T_string);  // call-back function for setting parameter "T" (threshold for region growing) 
+void sigma_set(const char* sigma_string);
 
                            
 
@@ -53,6 +56,7 @@ int main()
 	int button_clear = CreateButton("Clear",clear); // the last argument specifies the call-back function, see "cs1037utils.h"
 	int button_save = CreateButton("Save",image_save); // the last argument specifies the call-back function, see "cs1037utils.h"
 	T_box = CreateTextBox(to_Cstr("T=" << T), T_set); 
+	sigma_box = CreateTextBox(to_Cstr("sigma=" << sigma), sigma_set);
 	check_box_view = CreateCheckBox("view" , view, view_set); // see "cs1037utils.h"
 	SetWindowTitle("Live-Wire");      // see "cs1037utils.h"
     SetDrawAxis(pad,cp_height+pad,false); // sets window's "coordinate center" for GetMouseInput(x,y) and for all DrawXXX(x,y) functions in "cs1037utils" 
@@ -89,6 +93,7 @@ int main()
 	DeleteControl(check_box_view);
 	DeleteControl(button_save);
 	DeleteControl(T_box);
+	DeleteControl(sigma_box);
 	return 0;
 }
 
@@ -113,7 +118,8 @@ void image_load(int index)
 	int height = std::max(100,(int)image.getHeight())+ 2*pad + cp_height;
 	SetWindowSize(width,height); // window height includes control panel ("cp")
     SetControlPosition(    T_box,     image.getWidth()+pad+5, cp_height+pad);
-    SetControlPosition(check_box_view,image.getWidth()+pad+5, cp_height+pad+25);
+    SetControlPosition(    sigma_box, image.getWidth()+pad+5, cp_height+pad+25);
+    SetControlPosition(check_box_view,image.getWidth()+pad+5, cp_height+pad+50);
 	reset_segm();  // clears current "contour" and "region" objects - function in a4.cpp
 	draw();
 }
@@ -131,6 +137,12 @@ void view_set(bool v) {view=v; draw();}
 void T_set(const char* T_string) {
 	sscanf_s(T_string,"T=%d",&T);
 	cout << "parameter T is set to " << T << endl;
+}
+
+// call-back function for setting parameter "sigma"  
+void sigma_set(const char* sigma_string) {
+	sscanf_s(sigma_string,"sigma=%d",&sigma);
+	cout << "parameter sigma is set to " << sigma << endl;
 }
 
 // call-back function for left mouse-click

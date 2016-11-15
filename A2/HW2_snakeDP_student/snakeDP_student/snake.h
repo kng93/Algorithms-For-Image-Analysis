@@ -9,6 +9,10 @@ extern bool closedContour;    // a flag indicating if contour was closed - set i
 extern vector<Point> contour;   // a list of control points for a "snake" - set in snake.cpp
 extern int dP;   // spacing between control points (in pixels) - set in snake.cpp
 extern int modeVal; // set in main.cpp
+extern float keep; // minimum length for elasticity - set in snake.cpp
+extern float alpha; // constant for internal energy - set in snake.cpp
+extern float beta; // constant for distance transform - set in snake.cpp
+extern float r; // constant for nudging - set in snake.cpp
 
 void addToContour(Point click);
 void addToContourLast(Point click);

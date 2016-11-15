@@ -9,6 +9,10 @@
 
 // GLOBAL PARAMETERS AND SPECIALISED DATA TYPES
 int dP=4;    // default value for spacing between control points (in pixels)
+float keep = 1; // minimum length for elasticity - set in snake.cpp
+float alpha = 0.1; // constant for internal energy - set in snake.cpp
+float beta = 0.1; // constant for distance transform - set in snake.cpp
+float r = 50; 
 const double INFTY=1.e20;
 
 // declarations of global variables 
@@ -16,22 +20,19 @@ Table2D<RGB> image; // image is "loaded" from a BMP file by function "image_load
 vector<Point> contour; // list of control points of a "snake"
 bool closedContour=false; // a flag indicating if contour was closed 
 bool quad = true;
-double r = 50;
 vector<double> nudgeEn;
 
 Table2D<vitNode> energy;
 Table2D<vitNode> energy2;
 Table2D<double> contrast; // describes "rate of change" of intensity
 Table2D<double> distTransform; 
-const int NUMDIRS = 5;
-static const Point shift[NUMDIRS] = { Point(-1,0),Point(1,0),Point(0,-1),Point(0,1),Point(0,0) };
-enum Direction { LEFT = 0, RIGHT = 1, TOP = 2, BOTTOM = 3, STAY = 8, NONE = 10 };
+//const int NUMDIRS = 5;
+//static const Point shift[NUMDIRS] = { Point(-1,0),Point(1,0),Point(0,-1),Point(0,1),Point(0,0) };
+//enum Direction { LEFT = 0, RIGHT = 1, TOP = 2, BOTTOM = 3, STAY = 8, NONE = 10 };
 
-//const int NUMDIRS=9;
-//static const Point shift[NUMDIRS]={Point(-1,0),Point(1,0),Point(0,-1),Point(0,1),Point(-1,-1),Point(1,-1),Point(-1,1),Point(1,1),Point(0,0)};
-//enum Direction {LEFT=0, RIGHT=1, TOP=2, BOTTOM=3, TOPLEFT=4, TOPRIGHT=5, BOTTOMLEFT=6, BOTTOMRIGHT=7, STAY=8, NONE=10};
-//const Direction Reverse[NUMDIRS]={RIGHT,LEFT,BOTTOM,TOP,BOTTOMRIGHT,BOTTOMLEFT,TOPRIGHT,TOPLEFT}; 
-
+const int NUMDIRS=9;
+static const Point shift[NUMDIRS]={Point(-1,0),Point(1,0),Point(0,-1),Point(0,1),Point(-1,-1),Point(1,-1),Point(-1,1),Point(1,1),Point(0,0)};
+enum Direction {LEFT=0, RIGHT=1, TOP=2, BOTTOM=3, TOPLEFT=4, TOPRIGHT=5, BOTTOMLEFT=6, BOTTOMRIGHT=7, STAY=8, NONE=10};
 
 // GUI calls this function when button "Clear" is pressed, or when new image is loaded
 // THIS FUNCTION IS FULLY IMPLEMENTED, YOU DO NOT NEED TO CHANGE THE CODE IN IT
@@ -46,9 +47,8 @@ void reset_segm()
 	// Added..
 	contrast = grad2(image); // describes "rate of change" of intensity
 	
-	vector<int> kernel = { 0, 1, 1, 0 };
+	vector<int> kernel; kernel.push_back(0); kernel.push_back(1); kernel.push_back(1); kernel.push_back(0);
 	distTransform.reset(image.getWidth(), image.getHeight(), 0);
-	double beta = 0.1;
 	DTFwd(kernel, beta);
 	DTBwd(kernel, beta);
 }
@@ -122,8 +122,6 @@ void DP_move()
 {
 	int n = (int)contour.size();
 
-	double alpha = 0.1;
-
 	if (closedContour) {
 		energy.reset(n, NUMDIRS, vitNode(0, 0)); // # neighbour states, # contour points nodes
 		energy2.reset(n, NUMDIRS, vitNode(0, 0));
@@ -164,7 +162,7 @@ void DP_move()
 vitNode run_viterbi(Table2D<vitNode>& energy, int freezeIdx, double alpha, int n) {
 	vitNode bestEnergy(INFTY, 0);
 	int end = (closedContour) ? n : n - 1;
-	Point keep = (modeVal == 0) ? Point(0,0) : Point(1,1); // Defines space that should be kept between points
+	Point keepPoint = (modeVal == 0) ? Point(0,0) : Point(keep,keep); // Defines space that should be kept between points
 	
 	// TODO: CHECK IF THE POINT IS IN THE IMAGE
 	for (int i = freezeIdx; i<end + freezeIdx; i++) {
@@ -178,9 +176,10 @@ vitNode run_viterbi(Table2D<vitNode>& energy, int freezeIdx, double alpha, int n
 				Point shiftCur = contour[idx] + shift[s2];
 				double curEnergy = (idx > 0) ? energy[idx - 1][s2].energy : energy[end - 1][s2].energy;
 				double extEnergy = (modeVal == 2) ? pow(contrast[shiftCur],2) : 0; // External energy using gradient
+				// TODO: CHECK DISTANCE NOT SUBTRACTED BUT ADDED
 				extEnergy = (modeVal == 3) ? pow(distTransform[shiftCur], 2) : extEnergy; // External energy using distance transform
 				extEnergy = (nudgeEn.size() > 0) ? extEnergy + nudgeEn[idx] : extEnergy;
-				double intEnergy = (quad) ? (shiftNext - shiftCur - keep).norm() : pDist(shiftNext - shiftCur - keep);
+				double intEnergy = (quad) ? (shiftNext - shiftCur - keepPoint).norm() : pDist(shiftNext - shiftCur - keepPoint);
 
 				curEnergy = curEnergy + (alpha * intEnergy) - extEnergy;
 
@@ -218,7 +217,7 @@ void DTFwd(vector<int> kernel, double beta)
 			double cmp1, cmp2; //cmp1 = top right, cmp2 = bottom left
 			cmp1 = (x > 0) ? contrast[x-1][y] : INFTY;
 			cmp2 = (y > 0) ? contrast[x][y - 1] : INFTY;
-			double res = min(min(beta*kernel[1] + cmp1, beta*kernel[2] + cmp2), contrast[x][y]);
+			double res = std::min(std::min(beta*kernel[1] + cmp1, beta*kernel[2] + cmp2), contrast[x][y]);
 			distTransform[x][y] = res;
 		}
 	}
@@ -234,7 +233,7 @@ void DTBwd(vector<int> kernel, double beta)
 			double cmp1, cmp2; //cmp1 = top right, cmp2 = bottom left
 			cmp1 = (x < endX-1) ? contrast[x + 1][y] : INFTY;
 			cmp2 = (y < endY-1) ? contrast[x][y + 1] : INFTY;
-			distTransform[x][y] = min(min(beta*kernel[1] + cmp1, beta*kernel[2] + cmp2), contrast[x][y]);
+			distTransform[x][y] = std::min(std::min(beta*kernel[1] + cmp1, beta*kernel[2] + cmp2), contrast[x][y]);
 		}
 	}
 }

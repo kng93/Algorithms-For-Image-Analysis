@@ -8,6 +8,7 @@ extern Table2D<RGB> image;  // loaded by GUI in main.cpp
 extern bool closedContour;    // a flag indicating if contour was closed - set in wire.cpp
 extern vector<Point> contour;   // a list of 'contour' points - set in wire.cpp
 extern Table2D<int> region;   // a binary 2D mask of 'region' points - set in wire.cpp
+extern int sigma; // sensitivity parameter to weight the edges - set in main.cpp
 
 void addToContour(Point click);
 void addToContourLast(Point click);

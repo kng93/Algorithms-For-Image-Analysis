@@ -22,6 +22,10 @@ bool flagGD = false; // flag set by the check box
 const int cp_height = 34; // height of "control panel" (area for buttons)
 const int pad = 10; // width of extra "padding" around image (inside window)
 int dP_box; // handle for dP-box
+int length_box; // handle for length-box
+int alpha_box; // handle for alpha-box
+int beta_box; // handle for beta-box
+int r_box; // handle for r-box
 int check_box_flag; // handle for 'flag' check-box
 char c='\0'; // stores last pressed key
 
@@ -34,6 +38,10 @@ void mode_set(int index);   // call-back function for dropList selecting mode
 void clear();  // call-back function for button "Clear"
 void flag_set(bool v);  // call-back function for check box for "flag" 
 void dP_set(const char* dP_string);  // call-back function for setting parameter "dP" (interval between control points) 
+void length_set(const char* length_string);  // call-back function for setting parameter "length" (minimum length for elasticity) 
+void alpha_set(const char* alpha_string);  // call-back function for setting parameter "alpha" (constant for internal energy) 
+void beta_set(const char* beta_string);  // call-back function for setting parameter "beta" (constant for distance transform) 
+void r_set(const char* r_string);  // call-back function for setting parameter "r" (constant for nudging) 
 void my_line(Table2D<RGB>& im, Point a, Point b);
 void my_ellipse(Table2D<RGB>& im, Point c);
 
@@ -56,6 +64,10 @@ int main()
 	int button_clear = CreateButton("Clear",clear); // the last argument specifies the call-back function, see "cs1037utils.h"
 	int button_save = CreateButton("Save",image_save); // the last argument specifies the call-back function, see "cs1037utils.h"
 	dP_box = CreateTextBox(to_Cstr("dP=" << dP), dP_set); // variable dP is declared in "snake.cpp" 
+	length_box = CreateTextBox(to_Cstr("keep=" << keep), length_set); // variable keep is declared in "snake.cpp" 
+	alpha_box = CreateTextBox(to_Cstr("alpha=" << alpha), alpha_set); // variable alpha is declared in "snake.cpp" 
+	beta_box = CreateTextBox(to_Cstr("beta=" << beta), beta_set); // variable beta is declared in "snake.cpp" 
+	r_box = CreateTextBox(to_Cstr("r=" << r), r_set); // variable r is declared in "snake.cpp" 
 	check_box_flag = CreateCheckBox("GD flag" , flagGD, flag_set); // see "cs1037utils.h"
 	SetWindowTitle("DP snake");      // see "cs1037utils.h"
     SetDrawAxis(pad,cp_height+pad,false); // sets window's "coordinate center" for GetMouseInput(x,y) and for all DrawXXX(x,y) functions in "cs1037utils" 
@@ -92,6 +104,10 @@ int main()
 	DeleteControl(dropList_modes);     
 	DeleteControl(label1);
 	DeleteControl(dP_box);
+	DeleteControl(length_box);
+	DeleteControl(alpha_box);
+	DeleteControl(beta_box);
+	DeleteControl(r_box);
 	DeleteControl(check_box_flag);
 	DeleteControl(button_save);
 	return 0;
@@ -115,11 +131,15 @@ void image_load(int index)
 	im_index = index;
 	cout << "loading image file " << image_names[index] << ".bmp" << endl;
 	image = loadImage<RGB>(to_Cstr(image_names[index] << ".bmp")); // global function defined in Image2D.h
-	int width  = max(400,(int)image.getWidth()) + 2*pad + 80;
-	int height = max(100,(int)image.getHeight())+ 2*pad + cp_height;
+	int width  = std::max(400,(int)image.getWidth()) + 2*pad + 80;
+	int height = std::max(100,(int)image.getHeight())+ 2*pad + cp_height;
 	SetWindowSize(width,height); // window height includes control panel ("cp")
     SetControlPosition(   dP_box,     image.getWidth()+pad+5, cp_height+pad);
-    SetControlPosition(check_box_flag,image.getWidth()+pad+5, cp_height+pad+25);
+    SetControlPosition(   length_box,     image.getWidth()+pad+5, cp_height+pad+25);
+    SetControlPosition(   alpha_box,     image.getWidth()+pad+5, cp_height+pad+50);
+    SetControlPosition(   beta_box,     image.getWidth()+pad+5, cp_height+pad+75);
+    SetControlPosition(   r_box,     image.getWidth()+pad+5, cp_height+pad+100);
+    SetControlPosition(check_box_flag,image.getWidth()+pad+5, cp_height+pad+125);
 	reset_segm();  // clears current "contour" and "region" objects - function in a4.cpp
 	draw();
 }
@@ -138,6 +158,30 @@ void flag_set(bool f) {flagGD=f; draw();}
 void dP_set(const char* dP_string) {
 	sscanf_s(dP_string,"dP=%d",&dP);
 	cout << "parameter dP is set to " << dP << endl;
+}
+
+// call-back function for setting parameter "length" (minimum length for elasticity) 
+void length_set(const char* length_string) {
+	sscanf_s(length_string,"keep=%f",&keep);
+	cout << "parameter keep is set to " << keep << endl;
+}
+
+// call-back function for setting parameter "alpha" (constant for internal energy) 
+void alpha_set(const char* alpha_string) {
+	sscanf_s(alpha_string,"alpha=%f",&alpha);
+	cout << "parameter alpha is set to " << alpha << endl;
+}
+
+// call-back function for setting parameter "beta" (constant for distance transform) 
+void beta_set(const char* beta_string) {
+	sscanf_s(beta_string,"beta=%f",&beta);
+	cout << "parameter beta is set to " << beta << endl;
+}
+
+// call-back function for setting parameter "r" (constant for nudging) 
+void r_set(const char* r_string) {
+	sscanf_s(r_string,"r=%f",&r);
+	cout << "parameter r is set to " << r << endl;
 }
 
 // call-back function for left mouse-click

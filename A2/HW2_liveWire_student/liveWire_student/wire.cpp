@@ -19,7 +19,7 @@ static const Point shift[NUMDIRS]={Point(-1,0),Point(1,0),Point(0,-1),Point(0,1)
 enum Direction {LEFT=0, RIGHT=1, TOP=2, BOTTOM=3, TOPLEFT=4, TOPRIGHT=5, BOTTOMLEFT=6, BOTTOMRIGHT=7, NONE=10};
 const Direction Reverse[NUMDIRS]={RIGHT,LEFT,BOTTOM,TOP,BOTTOMRIGHT,BOTTOMLEFT,TOPRIGHT,TOPLEFT}; 
 //double fn(const double t) {double w=0.1; return 1.0/(1.0+w*t);}  // function used for setting "pixel penalties" ("Sensitivity" w is a tuning parameter)
-double fn(const double t) {double w=100; return (1/(sqrt(2*PI)*w))*exp(-(pow(t, 2))/(2*pow(w,2)));}
+double fn(const double t) {return (1/(sqrt(2*PI)*sigma))*exp(-(pow(t, 2))/(2*pow(double(sigma),2)));}
 
 // declarations of global variables 
 Table2D<RGB> image; // image is "loaded" from a BMP file by function "image_load" in "main.cpp" 
@@ -203,7 +203,7 @@ void computePaths(Point seed)
 			// If q is in the image and has not yet been expanded
 			if (image.pointIn(q) && region[q] != 1) {
 
-				double w_pq = penalty[q]; // TODO: get weight from p to q
+				double w_pq = penalty[q];
 				if ((dist[p] + w_pq) < dist[q]) {
 					dist[q] = dist[p] + w_pq;
 					toParent[q] = Reverse[i];
