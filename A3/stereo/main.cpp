@@ -19,8 +19,9 @@ const int cp_height = 34; // height of "control panel" (area for buttons)
 
 // declarations of global functions (see code below "main")
 void image_load();
-void display_image();
+void display_image(Table2D<RGB> img);
 void image_save();  // call-back function for button "Save Result"
+void win_approach();
 
 int main()
 {
@@ -33,7 +34,8 @@ int main()
 	int button_save = CreateButton("Save",image_save); // the last argument specifies the call-back function, see "cs1037utils.h"
 
 	image_load();
-	display_image();
+	win_approach();
+	display_image(disparityMap);
 
 	  // while-loop processing keys/mouse interactions 
 	while (!WasWindowClosed()) // WasWindowClosed() returns true when 'X'-box is clicked
@@ -53,10 +55,10 @@ void image_load()
 	imageR = loadImage<RGB>(to_Cstr(image_name << "_R.bmp"));
 }
 
-void display_image()
+void display_image(Table2D<RGB> img)
 {
 	SetWindowVisible(true); // see "cs1037utils.h"
-	if (!imageL.isEmpty()) drawImage(imageL); // draws image (object defined in wire.cpp) using global function in Image2D.h (1st draw method there)
+	if (!img.isEmpty()) drawImage(img); // draws image (object defined in wire.cpp) using global function in Image2D.h (1st draw method there)
 }
 
 // call-back function for button "Save"
@@ -72,4 +74,9 @@ void image_save()
 	string name(to_Cstr("Results/result_" << image_name << "_L" << save_counter << ".bmp"));
 	saveImage(tmp, to_Cstr(name));
 	cout << "Saved:" << name << endl;
+}
+
+void win_approach()
+{
+	windowBasedStereo();
 }
