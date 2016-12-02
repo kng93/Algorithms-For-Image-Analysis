@@ -151,7 +151,7 @@ void testImg() {
 void scanlineStereo()
 {
 	// TODO: find a way to get the max disparity. Setting to 1/3 image for now
-	int topDisp = 30; //ceil(double(imageL.getWidth() / 35));
+	int topDisp = 20; //ceil(double(imageL.getWidth() / 35));
 	//testImg();
 	init();
 
@@ -167,11 +167,16 @@ void scanlineStereo()
 		vitNode bestEnergy(INFTY, 0);
 		int end_x = 0;
 		energy.reset(img_width + 1, topDisp, vitNode(0,0));
-
+	
 		// Iterate over points in a scanline
 		for (int x = 0; x < img_width; x++) { 
 			int maxDisp = (x + topDisp) >= img_width ? img_width - x : topDisp;
 
+			if (y == 30)
+				cout << "X: " << x << " ";
+
+			if ((y == 30) && (x == 53))
+				cout << "HERE!";
 			// Iterate over all the disparities for RIGHT+1 pixel
 			for (int d1 = 0; d1 < maxDisp; d1++) {
 				vitNode minEnergy(INFTY, 0);
@@ -181,44 +186,48 @@ void scanlineStereo()
 				// Iterate over all disparities for RIGHT pixel
 				for (int d2 = 0; d2 < maxDisp; d2++) {
 					double oldEnergy = energy[x][d2].energy;
-					double diff = abs(dI(imageL[x+d1][y], imageR[x+d2][y]));
+					double diff = abs(dI(imageL[x+d2][y], imageR[x+d1][y]));
 					double curEnergy = oldEnergy + diff + abs(d1 - d2);
 
-					if (curEnergy < minEnergy.energy)
+					if (curEnergy <= minEnergy.energy)
 						minEnergy = vitNode(curEnergy, d2);
 				}
 
 				energy[x+1][d1] = minEnergy;
-				//if (y == 10)
-				//	cout << energy[x+1][d1].energy << " ";
+				if (y == 30)
+					cout << energy[x+1][d1].energy << "/" << energy[x+1][d1].toParent << " ";
 
 				// Get the minimum state of the last node
 				// img_width - 2 because index off-by-one and looking at +1 pixel
-				if ((x >= img_width-1-topDisp) && (minEnergy.energy/x < bestEnergy.energy)) {
+				if ((x >= img_width-1-topDisp) && (minEnergy.energy/x <= bestEnergy.energy)) {
 					bestEnergy.toParent = d1;
 					bestEnergy.energy = minEnergy.energy/x;
 					end_x = x;
 				}
 			}
-			//if (y == 10)
-			//	cout << endl;
+			if (y == 30)
+				cout << endl;
 		}
 
+
+		int curState = bestEnergy.toParent;
+		//if (y == 30) {
+		for (int i=img_width-1; i > 0; i--) { //for (int i=end_x; i > 0; i--) {
+			disparityValues[i][y] = bestEnergy.energy;
+			disparityMap[i][y] = bestEnergy.toParent * 10; //nearest(bestEnergy.toParent,10)*5;
+			if (y == 30)
+				cout << disparityMap[i][y] << " ";
+			bestEnergy = energy[i][bestEnergy.toParent];
+		}
+		//}
 
 		//int curState = bestEnergy.toParent;
 		//for (int i=end_x; i > 0; i--) { //for (int i=(img_width-1); i > 0; i--) {
 		//	disparityValues[i][y] = bestEnergy.energy;
-		//	disparityMap[i][y] = bestEnergy.toParent * 10; //nearest(bestEnergy.toParent,10)*5;
-		//	bestEnergy = energy[i][bestEnergy.toParent];
+		//	bestEnergy = energy[i][curState];
+		//	disparityMap[i][y] = abs(curState - bestEnergy.toParent) * 10; //nearest(bestEnergy.toParent,10)*5;
+		//	curState = bestEnergy.toParent;
 		//}
-
-		int curState = bestEnergy.toParent;
-		for (int i=end_x; i > 0; i--) { //for (int i=(img_width-1); i > 0; i--) {
-			disparityValues[i][y] = bestEnergy.energy;
-			curState = bestEnergy.toParent;
-			bestEnergy = energy[i][curState];
-			disparityMap[i][y] = abs(curState - bestEnergy.toParent) * 10; //nearest(bestEnergy.toParent,10)*5;
-		}
 	}
 
 	cout << "Hello" << endl;
