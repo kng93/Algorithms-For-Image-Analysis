@@ -16,6 +16,7 @@
 int save_counter;
 string image_name;
 const int cp_height = 34; // height of "control panel" (area for buttons)
+const int pad = 10; // width of extra "padding" around image (inside window)
 
 // declarations of global functions (see code below "main")
 void image_load();
@@ -31,10 +32,12 @@ int main()
 	
 	int blank = CreateTextLabel(""); // adds grey "control panel" for buttons/dropLists, see "cs1037utils.h"
     SetControlPosition(blank,0,0); SetControlSize(blank,1280,cp_height); // see "cs1037utils.h"
+	SetDrawAxis(pad,cp_height+pad,false);
 	int button_save = CreateButton("Save",image_save); // the last argument specifies the call-back function, see "cs1037utils.h"
 
 	image_load();
-	win_approach();
+	scanlineStereo();
+	//win_approach();
 	display_image(disparityMap);
 
 	  // while-loop processing keys/mouse interactions 
