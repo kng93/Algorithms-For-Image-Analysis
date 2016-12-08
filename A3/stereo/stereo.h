@@ -9,6 +9,9 @@ extern Table2D<int> disparityMap;
 
 extern int img_width; // set in stereo.cpp
 extern int img_height; // set in stereo.cpp
+extern int maxDisp; // set in main.cpp
+extern int wwin; // set in main.cpp
+extern int hwin; // set in main.cpp
 typedef unsigned pix_id; // internal (private) indices of features 
 
 void createIntegralImg(int disp);
@@ -17,6 +20,8 @@ void windowBasedStereo();
 
 void testImg();
 void scanlineStereo();
+void multilineStereo();
+void init();
 
 
 // functions for converting node indeces to Points and vice versa.
@@ -35,3 +40,21 @@ public:
 	bool operator<(const vitNode& c) const {return energy < c.energy;}
     bool operator>(const vitNode& c) const {return energy > c.energy;}
 };
+
+inline float calculateSD()
+{
+    float sum = 0.0, mean, standardDeviation = 0.0;
+	int num_vals = img_width*img_height;
+
+    for(int x = 0; x < img_width; x++) 
+		for (int y = 0; y < img_height; y++)
+			sum += float(imageL[x][y]);
+
+    mean = sum/num_vals;
+
+    for(int x = 0; x < img_width; x++) 
+		for (int y = 0; y < img_height; y++)
+			standardDeviation += pow(float(imageL[x][y]) - mean, 2);
+
+    return sqrt(standardDeviation / num_vals);
+}
